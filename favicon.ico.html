@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>32x32 Favicon.ico 產生器</title>
+    <style>
+        /* CSS 樣式 (維持不變) */
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --background-color: #f8f9fa;
+            --drop-zone-bg: #ffffff;
+            --drop-zone-border: #ced4da;
+            --drop-zone-border-drag: #007bff;
+            --text-color: #212529;
+            --button-disabled-bg: #cce5ff;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            background-color: var(--drop-zone-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+        h1 small {
+            font-size: 0.5em;
+            color: var(--secondary-color);
+            display: block;
+        }
+        p {
+            color: var(--secondary-color);
+            margin-bottom: 30px;
+        }
+        #drop-zone {
+            border: 3px dashed var(--drop-zone-border);
+            border-radius: 10px;
+            padding: 40px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        #drop-zone.drag-over {
+            border-color: var(--drop-zone-border-drag);
+            background-color: #f0f8ff;
+        }
+        #drop-zone-text {
+            font-size: 1.2em;
+            color: var(--secondary-color);
+        }
+        #file-input {
+            display: none;
+        }
+        #preview-container {
+            margin-top: 20px;
+            display: none;
+        }
+        #image-preview {
+            max-width: 150px;
+            max-height: 150px;
+            border-radius: 8px;
+            border: 1px solid var(--drop-zone-border);
+            background-image: linear-gradient(45deg, #eee 25%, transparent 25%), linear-gradient(-45deg, #eee 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #eee 75%), linear-gradient(-45deg, transparent 75%, #eee 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        #generate-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1em;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.3s, transform 0.2s;
+            width: 100%;
+        }
+        #generate-btn:hover:not(:disabled) {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+        #generate-btn:disabled {
+            background-color: var(--button-disabled-bg);
+            cursor: not-allowed;
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>32x32 Favicon.ico 產生器 <small>採用 Lanczos 高品質縮圖</small></h1>
+        <p>上傳圖片，產生僅包含 32x32 尺寸的 Favicon。</p>
+
+        <div id="drop-zone">
+            <span id="drop-zone-text">拖曳圖片到這裡，或點擊上傳</span>
+            <input type="file" id="file-input" accept="image/png, image/jpeg, image/gif, image/svg+xml">
+        </div>
+
+        <div id="preview-container">
+            <h3>圖片預覽：</h3>
+            <img id="image-preview" src="" alt="Image Preview">
+        </div>
+
+        <button id="generate-btn" disabled>產生並下載 32x32 favicon.ico</button>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/pica@9.0.1/dist/pica.min.js"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const dropZoneText = document.getElementById('drop-zone-text');
+        const previewContainer = document.getElementById('preview-container');
+        const imagePreview = document.getElementById('image-preview');
+        const generateBtn = document.getElementById('generate-btn');
+
+        let sourceImageElement = null;
+        const picaInstance = pica();
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', e => e.target.files.length && handleFile(e.target.files[0]));
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', e => { e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('drag-over'); });
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('drag-over');
+            e.dataTransfer.files.length && handleFile(e.dataTransfer.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('請上傳圖片檔案！');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = e => {
+                sourceImageElement = new Image();
+                sourceImageElement.onload = () => {
+                    imagePreview.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                    generateBtn.disabled = false;
+                    dropZoneText.textContent = file.name;
+                };
+                sourceImageElement.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        generateBtn.addEventListener('click', async () => {
+            if (!sourceImageElement) { alert('請先上傳圖片！'); return; }
+            
+            generateBtn.disabled = true;
+            generateBtn.textContent = '正在高品質產生中...';
+
+            try {
+                const icoBlob = await createIco(sourceImageElement);
+                downloadBlob(icoBlob, 'favicon.ico');
+            } catch (error) {
+                console.error('ICO 生成失敗:', error);
+                alert('ICO 生成失敗，請檢查主控台以獲取更多資訊。');
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = '產生並下載 32x32 favicon.ico';
+            }
+        });
+        
+        async function resizeToPngWithPica(image, size) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const options = {
+                quality: 3,
+                alpha: true,
+                unsharpAmount: 40,
+                unsharpRadius: 0.5,
+                unsharpThreshold: 1
+            };
+            await picaInstance.resize(image, canvas, options);
+            const blob = await picaInstance.toBlob(canvas, 'image/png');
+            return blob.arrayBuffer();
+        }
+        
+        async function createIco(image) {
+            // ** 主要變更點：只產生 32x32 單一尺寸 **
+            const sizes = [32];
+            
+            const pngBuffers = await Promise.all(sizes.map(size => resizeToPngWithPica(image, size)));
+            
+            const headerSize = 6, dirEntrySize = 16, numImages = sizes.length;
+            let totalSize = headerSize + (numImages * dirEntrySize);
+            pngBuffers.forEach(buffer => totalSize += buffer.byteLength);
+
+            const finalBuffer = new ArrayBuffer(totalSize);
+            const view = new DataView(finalBuffer);
+
+            view.setUint16(0, 0, true);
+            view.setUint16(2, 1, true);
+            view.setUint16(4, numImages, true);
+
+            let currentOffset = headerSize + (numImages * dirEntrySize);
+            pngBuffers.forEach((buffer, i) => {
+                const size = sizes[i], dirOffset = headerSize + (i * dirEntrySize);
+                view.setUint8(dirOffset, size);
+                view.setUint8(dirOffset + 1, size);
+                view.setUint8(dirOffset + 2, 0);
+                view.setUint8(dirOffset + 3, 0);
+                view.setUint16(dirOffset + 4, 1, true);
+                view.setUint16(dirOffset + 6, 32, true);
+                view.setUint32(dirOffset + 8, buffer.byteLength, true);
+                view.setUint32(dirOffset + 12, currentOffset, true);
+                currentOffset += buffer.byteLength;
+            });
+
+            currentOffset = headerSize + (numImages * dirEntrySize);
+            const finalByteArray = new Uint8Array(finalBuffer);
+            pngBuffers.forEach(buffer => {
+                finalByteArray.set(new Uint8Array(buffer), currentOffset);
+                currentOffset += buffer.byteLength;
+            });
+            
+            return new Blob([finalBuffer], { type: 'image/x-icon' });
+        }
+
+        function downloadBlob(blob, filename) {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        }
+    });
+    </script>
+</body>
+</html>
